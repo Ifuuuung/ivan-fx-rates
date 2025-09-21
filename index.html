@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixer Current</title>
+    <style>
+      body {
+        background: #22223b
+      }
+      
+      .smallHeading{
+        font-size: 14px;
+      }
+      .container {
+        max-width: 960px;
+        margin : 0 auto;
+        padding : 16px 12px;
+        text-align: center;
+
+      }
+    
+      .table-wrap {
+        display: inline-block;
+        max-width: 100%;
+        overflow-x: auto ;
+      }
+      
+      table { width: 100%; 
+      border: 1px solid #000; 
+      border-radius: 12px;
+      overflow: hidden;
+      outline : 1px solid #100;
+      }
+      
+      
+      #ratestable {
+        margin: 0 auto;                    
+        border-collapse: collapse;
+      }
+      
+      #ratestable th, #ratestable td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #ddd;    
+      }
+      #ratestable thead th {
+        background: #4a4e69;     
+        color: #F2E9E4;
+      }
+      
+      #ratestable tbody tr:nth-child(even) { background:#C9ADA7;}
+      #ratestable tbody tr:nth-child(odd) {background-color: #F2E9E4;}
+      
+      .num, .numAdd {
+        text-align: left;                  
+        font-variant-numeric: tabular-nums; 
+      }
+      
+      #status{
+        color: #F2E9E4;
+        text-align: left;
+      }
+      
+      tr.even-row{
+        
+        outline:2px solid #e11d48;
+        outline-offset: -4px;
+        
+      }
+    
+      
+      
+    </style>
+  </head>
+<!-- --------------------------------- body ------------------------------------------- -->
+  <body>
+    
+    <div class="container">
+      <h1 style="text-align:left; color:#F2E9E4;"> Foreign Exchange Rates <span class="smallHeading">by Ivan Fung</span> </h1>
+      
+      <p id="status">Status: not ready</p>
+      
+      <p style="border: 1px solid black; border-radius: 25px;padding: 5px;background-color:#4A4E69;color:#F2E9E4">Currency based on EUR</p>
+
+    
+      
+      <div class="table-wrap"></div>
+        <table id="ratestable">
+          <thead>
+            <tr>
+              <th>Currency</th>
+              <th style='text-align:left'>Number</th>
+              <th style='text-align:left'>Number (+10.0002)</th>
+            </tr>
+          </thead>
+          <tbody id="tbody" class="rates-body"></tbody>
+        </table>
+      </div>
+    </div> 
+<!-- ---------------------------------javascript------------------------------------------- -->
+
+      <script>
+        const API_URL = `https://data.fixer.io/api/latest?access_key=${encodeURIComponent('f8afebc2cbc27e6f0f53738d7d728c88')}`;
+  
+        async function main(){
+          const status = document.getElementById('status');
+          const tbody = document.getElementById('tbody');
+          const toggleEvenEl = document.getElementById('toggleEven');
+          
+          function isEvenNumber(n) {
+            const x = Math.trunc(Number(n));
+            let isEven = false;
+            if (x%2===0){
+              isEven = true;
+            }
+            return isEven;
+          }
+          
+          function HightlightRow(tr){
+            const code = tr.dataset.code;
+            if (code ==='HKD'){
+              return true;
+            }
+            
+            const num = Number(tr.dataset.num);
+            const add = Number(tr.dataset.add);
+            
+            const isNumEven = isEvenNumber(num);
+            const isAddEven = isEvenNumber(num);
+            
+            return isNumEven || isAddEven;
+          }
+          
+          status.textContent = 'status:loading';
+          try{
+            const res = await fetch(API_URL, { cache: 'no-store' });
+            if(!res.ok){
+              throw new Error('HTTP ' + res.status);
+             }
+            const data = await res.json();
+            if(!data.success){
+             throw new Error(data.error && data.error.info ? data.error.info : 'return unsuccessful');
+             }
+             const rates = data.rates;
+             const entries = Object.entries(rates)
+             
+             tbody.innerHTML ='';
+             
+             for(const [code,value] of entries){
+               const tr = document.createElement('tr');
+               
+               const tdCode = document.createElement('td');
+               tdCode.textContent = code;
+               
+               const tdNum = document.createElement('td');
+               const num = Number(value);
+               tdNum.textContent = num.toFixed(4);
+               tdNum.className = 'num';
+               
+               const tdNumAdd = document.createElement('td');
+               const add = num + 10.0002;
+               tdNumAdd.textContent = add.toFixed(4);
+               tdNumAdd.className = 'num';
+               
+               tr.dataset.code = String(code);
+               tr.dataset.num = String(num);
+               tr.dataset.add = String(add);
+               
+               tr.appendChild(tdCode);
+               tr.appendChild(tdNum);
+               tr.appendChild(tdNumAdd);
+               
+               if (HightlightRow(tr)){
+                 tr.classList.add('even-row');
+               }
+               
+               tbody.appendChild(tr);
+               
+             }
+             
+            const trMessage = document.createElement('tr');
+            const tdSpace  = document.createElement('td');
+            const tdSpace2  = document.createElement('td');
+            tdSpace.textContent ="";
+            tdSpace2.textContent ="";
+            trMessage.textContent = "Even number/HKD->red border";
+            trMessage.appendChild(tdSpace);
+            trMessage.appendChild(tdSpace2);
+            tbody.appendChild(trMessage);
+             
+            status.textContent = 'Status: Data loaded';
+        }catch(err){
+          status.textContent = 'Status: Failed';
+          tbody.innerHTML = `
+          <tr>
+            <td>
+              Error: ${err?.message || String(err)}
+            </td>
+          </tr>
+        `;
+
+          console.error(err);
+        }
+      }
+      
+       main();
+      </script>
+  </body>
+</html>
